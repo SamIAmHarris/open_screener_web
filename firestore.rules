@@ -1,0 +1,55 @@
+service cloud.firestore {
+    match /databases/{database}/documents {
+
+        match /users/{user} {
+            //half helen admins and school admins can get and query users
+            allow get, list, create: if true;
+            //half helen admins, school admins and own uses can modify user data
+            allow update, delete: if isHalfHelenAdmin();
+        }
+        
+        match /roles/{role} {
+            allow get: if true;
+            allow list, update, create, delete: if isHalfHelenAdmin();
+        }
+
+        match /districts/{district} {
+            //todo: add a case for district admin
+            allow read, write: if isHalfHelenAdmin();
+        }
+        
+        match /schools/{school} {
+            allow read, write: if isHalfHelenAdmin();
+        }
+
+        match /screenings/{screening} {
+            //todo: add a case for screener, parent
+            allow read, write: if false;
+        }
+
+        match /students/{student} {
+            //todo: to add a case for screener, parent
+            allow read, write: if isHalfHelenAdmin();
+        }
+
+        function isSignedIn() {
+          return request.auth != null;
+        }
+        
+        function getRoles() {
+          return get(/databases/$(database)/documents/roles/$(request.auth.uid)).data
+        }
+        
+        function hasRole(role) {
+          return isSignedIn() && getRoles()[role] == true;
+        }
+        
+        function hasAnyRole(roles) {
+          return isSignedIn() && getRoles().keys().hasAny(roles);
+        }
+        
+        function isHalfHelenAdmin() {
+          return hasRole('half_helen_admin');
+        }
+    }
+}
